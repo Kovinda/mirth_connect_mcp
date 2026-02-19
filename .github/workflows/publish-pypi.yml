@@ -36,7 +36,7 @@ jobs:
       id-token: write
     environment:
       name: pypi
-      url: https://pypi.org/p/mirth_connect_mcp
+      url: https://pypi.org/project/mirth-connect-mcp/
     steps:
       - name: Download dist artifacts
         uses: actions/download-artifact@v4

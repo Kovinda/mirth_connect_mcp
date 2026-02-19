@@ -147,5 +147,3 @@ Domain tool request envelope:
 	"headers_override": {}
 }
 ```
-
-

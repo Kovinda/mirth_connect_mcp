@@ -1,4 +1,4 @@
-name: CI
+name: CI / Release / PyPI
 
 on:
   push:
@@ -6,9 +6,14 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  ci:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.value }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,18 +29,57 @@ jobs:
       - name: Run tests
         run: uv run pytest
 
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          python-version: "3.13"
-
       - name: Build distribution
         run: |
           uv build
           uv run --with twine twine check dist/mirth_connect_mcp-*
+
+      - name: Read package version
+        id: version
+        run: |
+          python - <<'PY'
+          import pathlib
+          import tomllib
+
+          pyproject = pathlib.Path("pyproject.toml")
+          data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+          version = data["project"]["version"]
+          output_path = pathlib.Path(__import__("os").environ["GITHUB_OUTPUT"])
+          with output_path.open("a", encoding="utf-8") as f:
+              f.write(f"value={version}\n")
+          print(f"Version: {version}")
+          PY
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  release_and_publish:
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && contains(github.event.head_commit.message, '[release]')
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    environment:
+      name: pypi
+      url: https://pypi.org/project/mirth-connect-mcp/
+    steps:
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.ci.outputs.version }}
+          name: v${{ needs.ci.outputs.version }}
+          generate_release_notes: true
+          files: dist/*
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

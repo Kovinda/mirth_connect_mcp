@@ -3,6 +3,7 @@ name: CI / Release / PyPI
 on:
   push:
     branches: ["main", "master"]
+    tags: ["v*"]
   pull_request:
   workflow_dispatch:
 
@@ -57,7 +58,7 @@ jobs:
           path: dist/
 
   release_and_publish:
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && contains(github.event.head_commit.message, '[release]')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     needs: ci
     runs-on: ubuntu-latest
     permissions:
@@ -67,11 +68,12 @@ jobs:
       name: pypi
       url: https://pypi.org/project/mirth-connect-mcp/
     steps:
-      - name: Fail if release tag already exists
+      - name: Fail if tag and package version differ
         run: |
-          TAG="v${{ needs.ci.outputs.version }}"
-          if git ls-remote --exit-code --tags "https://github.com/${{ github.repository }}.git" "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "::error::Tag ${TAG} already exists. Bump version in pyproject.toml before using [release]."
+          EXPECTED_TAG="v${{ needs.ci.outputs.version }}"
+          ACTUAL_TAG="${{ github.ref_name }}"
+          if [ "$ACTUAL_TAG" != "$EXPECTED_TAG" ]; then
+            echo "::error::Tag ${ACTUAL_TAG} does not match pyproject version (${EXPECTED_TAG})."
             exit 1
           fi
 
@@ -84,8 +86,8 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ needs.ci.outputs.version }}
-          name: v${{ needs.ci.outputs.version }}
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           generate_release_notes: true
           files: dist/*
 

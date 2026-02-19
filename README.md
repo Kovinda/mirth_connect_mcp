@@ -128,14 +128,6 @@ In your Gemini CLI MCP config, add:
 }
 ```
 
-## Verify it works
-
-After your MCP client reloads:
-
-1. Call `list_domains`
-2. Call `list_actions` with a domain from step 1
-3. Invoke the corresponding domain tool with an `action`
-
 ## Tool model
 
 Built-in tools:
@@ -156,24 +148,3 @@ Domain tool request envelope:
 }
 ```
 
-## Troubleshooting
-
-- `command not found: mirth-connect-mcp`: reinstall with `uv tool install mirth_connect_mcp`
-- auth errors: verify `MIRTH_USERNAME` / `MIRTH_PASSWORD`
-- TLS errors locally: set `MIRTH_VERIFY_SSL=false`
-- no tools visible: restart your MCP client after config changes
-
-## For maintainers
-
-Run tests:
-
-```bash
-uv run pytest
-```
-
-Build and check package:
-
-```bash
-uv build
-uv run --with twine twine check dist/mirth_connect_mcp-*
-```

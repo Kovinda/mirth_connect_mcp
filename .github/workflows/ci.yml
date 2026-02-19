@@ -67,6 +67,14 @@ jobs:
       name: pypi
       url: https://pypi.org/project/mirth-connect-mcp/
     steps:
+      - name: Fail if release tag already exists
+        run: |
+          TAG="v${{ needs.ci.outputs.version }}"
+          if git ls-remote --exit-code --tags "https://github.com/${{ github.repository }}.git" "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "::error::Tag ${TAG} already exists. Bump version in pyproject.toml before using [release]."
+            exit 1
+          fi
+
       - name: Download dist artifacts
         uses: actions/download-artifact@v4
         with:
